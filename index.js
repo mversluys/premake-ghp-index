@@ -4,15 +4,24 @@
 var express = require('express'),
 	cookieSession = require('cookie-session'),
 	bodyParser = require('body-parser'),
-	passport = require('passport');
-
-var app = express();
+	passport = require('passport'),
+	pgPromise = require('pg-promise'),
+	github = require('github-api'),
+	moment = require('moment'),
+	marked = require('marked'),
+	highlight = require('highlight.js');
 
 //------------------------------------------------------------------------------
 // express
 
+var app = express();
 app.use(express.static('static'));
 app.use(cookieSession({ name: 'session', keys: ['key1', 'key2'] }))
+
+//------------------------------------------------------------------------------
+// database
+
+var db = pgPromise(process.env.DATABASE_URL);
 
 //------------------------------------------------------------------------------
 // passport
@@ -58,6 +67,21 @@ passport.deserializeUser(function(obj, done) {
 // jade
 
 app.set('view engine', 'jade');
+
+//------------------------------------------------------------------------------
+// markdown
+
+marked.setOptions({
+	highlight: function (code, lang) {
+		if (lang) {
+			return highlight.highlight(lang, code).value;
+		}
+		else {
+			return highlight.highlightAuto(code).value;
+		}
+	}
+});
+
 
 //------------------------------------------------------------------------------
 // routes
@@ -106,19 +130,113 @@ app.get('/api/auth-callback',
 
 app.post('/:organization/:repository', function (req, res) {
 
-	// attempt to add
+	db.one('select id from package where organization = ${organization} and repository = ${repository}', { 
+		organization: req.params.organization, 
+		repository: req.params.repository
+	}).then(function (data) {
+		res.status(200).end();
+	}).catch(function (error) {
 
-    // success, redirect to view	
-	res.redirect('/' + req.params.organization + '/' + req.params.repository)
+		var gh = github({ token: req.user.access_token });
+		var repo = gh.getRepo(req.params.organization, req.params.repository);
+
+		if (repo) {
+			console.log(json.stringify(repo, null, 4));
+
+			db.one('insert into package (organization, repository) values (${organization}, ${repository}', {
+				organization: req.params.organization, 
+				repository: req.params.repository
+			}).then(function (data) {
+				res.status(200).end();
+			}).catch(function (error) {
+				res.status(500).end('unable to insert into database');
+			});
+		} else {
+			res.status(400).end('no such repository');
+		}
+
+	});
 });
 
 // view a package
 
+getReadme = function (ref, raw, cb) {
+	return this._request('GET', `/repos/${this.__fullname}/readme`, {
+		ref
+	}, cb, raw);
+}
+
 app.get('/:organization/:repository', function (req, res) {
 
-	// gather information about the package
+	var gh = new github({ token: req.user.access_token });
+	var repo = gh.getRepo(req.params.organization, req.params.repository);
 
-	res.render('view', { user: req.user });
+	repo.getReadme = getReadme;
+
+	console.log('viewing ' + JSON.stringify(repo, null, 4));
+
+	repo.getDetails()
+	.then(function (result) {
+
+		var details = result.data;
+		console.log('details ' + JSON.stringify(details, null, 4));
+
+		repo.getRelease('latest')
+		.then(function (result) {
+			var release = result.data;
+			release.created_at_fromnow = moment(release.published_at).fromNow();
+			release.published_at_fromnow = moment(release.published_at).fromNow();
+
+			console.log('release: ' + JSON.stringify(release, null, 4));
+
+			repo.getReadme(release.tag_name)
+			.then(function (result) {
+				var readme = result.data;
+				readme.content_html = marked(new Buffer(readme.content, 'base64').toString());
+
+				console.log('readme: ' + JSON.stringify(readme, null, 4));
+				res.render('view', { user: req.user, repo: details, release: release, readme: readme });
+			})
+			.catch(function (error) {
+				console.log('readme retrieve failed: ' + error);
+				res.render('view', { user: req.user, repo: details, release: release });
+
+				// couldn't get the README from the release, try the readme from master
+				repo.getReadme()
+				.then(function (result) {
+					var readme = result.data;
+					readme.content_html = marked(new Buffer(readme.content, 'base64').toString());
+
+					console.log('readme: ' + JSON.stringify(readme, null, 4));
+					res.render('view', { user: req.user, repo: details, release: release, readme: readme });
+				})
+				.catch(function (error) {
+					console.log('readme retrieve failed: ' + error);
+					res.render('view', { user: req.user, repo: details, release: release });
+				});
+			});
+		})
+		.catch(function (error) {
+			console.log('release retrieve failed: ' + error);
+
+			// try the readme from master
+			repo.getReadme()
+			.then(function (result) {
+				var readme = result.data;
+				readme.content_html = marked(new Buffer(readme.content, 'base64').toString());
+
+				console.log('readme: ' + JSON.stringify(readme, null, 4));
+				res.render('view', { user: req.user, repo: details, readme: readme });
+			})
+			.catch(function (error) {
+				console.log('readme retrieve failed: ' + error);
+				res.render('view', { user: req.user, repo: details });
+			});
+		});
+	}).catch(function (error) {
+		console.log('repo retrieve failed: ' + error);
+		res.status(500).end(error);
+	});
 });
 
 // remove a package
