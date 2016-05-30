@@ -1,0 +1,68 @@
+block vars
+
+doctype
+html
+	head
+		meta(charset='utf-8')
+		meta(name='viewport', content='width=device-width, initial-scale=1')
+		title premake-ghp
+
+		link(href='//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.6/css/bootstrap.min.css', rel='stylesheet')
+		link(href='//cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.3/nv.d3.css', rel='stylesheet')
+		link(href='//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css', rel='stylesheet')
+
+		block style
+			style.
+				body { 
+					padding-top: 70px; 
+					padding-right: 0px !important;
+					color: #555;
+				}
+				html { position: relative; min-height: 100%; }
+				.modal-open {
+					overflow-y: auto;
+				}
+	body
+
+		nav#navbar-top.navbar.navbar-default.navbar-fixed-top.navbar-inverse
+			.container
+				.navbar-header
+					button.navbar-toggle.collapsed(type='button', data-toggle='collapse', data-target='#navbar-content', aria-expanded='false')
+						span.sr-only Toggle navigation
+						span.icon-bar
+						span.icon-bar
+						span.icon-bar
+					a.brand.navbar-brand(href='/') premake-ghp
+
+				#navbar-content.collapse.navbar-collapse
+					ul.nav.navbar-nav
+						li(class=nav == 'home' ? 'active' : undefined): a(href='/') 
+							i.fa.fa-home.fa-lg #[span.sr-only (current)]
+
+					ul.nav.navbar-nav.navbar-right
+						if user 
+							li.dropdown
+								a.dropdown-toggle(href='#', data-toggle='dropdown', role='button', aria-haspopup='true', aria-expanded='false')
+									i.fa.fa-github.fa-lg
+									span 
+										=user.name
+									span.caret
+								ul.dropdown-menu
+									li: img(src=user.avatar_url) 
+									li: a(href=user.profile_url) Profile
+									li: a(href='/logout') Log out
+						else
+							li.navbar-right: a(href='/login') 
+								span Log in with GitHub
+								span 
+									i.fa.fa-github.fa-lg
+
+		.container
+			block content
+
+		script(src='//cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js')
+		script(src='//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.6/js/bootstrap.min.js')
+		script(src='//cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js')
+		script(src='//cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.3/nv.d3.min.js')
+
+		block script

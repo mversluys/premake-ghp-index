@@ -1,0 +1,24 @@
+{
+  "name": "premake-ghp-index",
+  "version": "0.1.0",
+  "description": "Premake GitHub Package Index",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "4.13.4",
+    "jade": "1.11.0",
+    "cookie-session": "1.2.0",
+    "body-parser": "1.15.1",
+    "passport": "0.3.2",
+    "passport-github2": "0.1.10"
+  },
+  "engines": {
+    "node": "0.12.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mversluys/premake-ghp-index.git"
+  }
+}

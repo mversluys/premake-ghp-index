@@ -1,0 +1,76 @@
+block vars
+	- var nav = 'home'
+
+append style
+	style.
+		h1 {
+			text-align: center;
+			margin-bottom: 40px;
+		}
+		h3 {
+			padding-bottom: 5px;
+			border-bottom: 1px solid #ddd;
+		}
+
+block content
+
+
+	.modal.fade(id='add', tabindex='-1', role='dialog', aria-labelledby='#addLabel')
+		.modal-dialog(role='document')
+			.modal-content
+				.modal-header
+					button.close(type='button', data-dismiss='modal', aria-label='Close')
+						span(aria-hidden='true') &times;
+					h4.modal-title Add a new package
+				.modal-body
+					form(id='addForm', method='post')
+						.form-group
+							label.control-label(for='organization') Organization
+							input#name.form-control(type='text', name='organization')
+						.form-group
+							label.control-label(for='repository') Repository
+							input#name.form-control(type='text', name='repository')
+				.modal-footer
+					button.btn.btn-primary(id='addSubmit', type='button', data-dismiss='modal') Ok
+					button.btn.btn-default(type='button', data-dismiss='modal') Cancel
+
+	.container
+
+		.row
+			.col-md-12
+				h1 
+					a(href='https://github.com/mversluys/premake-ghp') premake-ghp 
+					| is a package manager for 
+					a(href='https://premake.github.io') premake
+
+		.row
+			.col-md-9
+				h3 packages used a lot this week
+				h3 recently updated packages
+
+			.col-md-3
+
+				.well
+					if user
+						button(type='button', data-toggle='modal', data-target='#add').btn.btn-default add a new package
+					else
+						| Would you like to contribute a new package? 
+						a(href='/login') Sign in to GitHub.
+
+				.well
+					i.fa.fa-archive.fa-2x
+					span 0 total packages
+
+
+				.well
+					i.fa.fa-calendar.fa-2x
+					span 0 package usage
+
+
+	script.
+		$(function () {
+
+			$('#addSubmit').click(function (e) {
+
+			});
+		});
