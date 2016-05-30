@@ -1,3 +1,5 @@
+extends ./layout.jade
+
 block vars
 	- var nav = 'home'
 
@@ -14,7 +16,6 @@ append style
 
 block content
 
-
 	.modal.fade(id='add', tabindex='-1', role='dialog', aria-labelledby='#addLabel')
 		.modal-dialog(role='document')
 			.modal-content
@@ -24,6 +25,8 @@ block content
 					h4.modal-title Add a new package
 				.modal-body
 					form(id='addForm', method='post')
+						//input#image_url(type='hidden', name='image_url', value=whisky ? '#{whisky.image_url}' : undefined)
+						//input#distillery(type='hidden', name='distillery', value='#{distillery.id}')
 						.form-group
 							label.control-label(for='organization') Organization
 							input#name.form-control(type='text', name='organization')
