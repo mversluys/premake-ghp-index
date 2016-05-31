@@ -105,7 +105,17 @@ marked.setOptions({
 // static pages
 
 app.get('/', function (request, response) {
-	response.render('home', { user: request.user });
+
+	db.any('select organization, repository, description, latest_release, stargazers, watchers, updated from package order by updated desc limit 9')
+	.then(function (data) {
+		for (var i = 0; i < data.length; ++i) {
+			data[i].updated_fromnow = moment(data[i].updated).fromNow();
+		}
+		response.render('home', { user: request.user, recent: data });
+	}).catch(function (error) {
+		console.log('retrieving recent packages failed ' + error);
+		response.status(500).end('Uh oh. Internal server error.');
+	});
 });
 
 // add a new package ...

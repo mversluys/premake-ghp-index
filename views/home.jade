@@ -31,7 +31,7 @@ block content
 						.form-group
 							input#repository.form-control(type='text', name='repository', placeholder='Repository')
 					.alert.alert-info 
-						p The repository needs to contain /premake5-ghp.lua and have at least one published release before it can be added to the index.
+						p The repository needs to contain premake5-ghp.lua and have at least one published release before it can be added to the index.
 						p Your account must have access to install a hook into the repository.
 				.modal-footer
 					button.btn.btn-primary(id='addSubmit', type='button', data-dismiss='modal') Ok
@@ -62,6 +62,25 @@ block content
 			.col-md-9
 				h3 packages used a lot this week
 				h3 recently updated packages
+				.row
+					each package in recent
+						- var url = 'http://github.com/' + package.organization + '/' + package.repository
+						.col-sm-4
+							div 
+								a(href='#{url}') #{package.organization}/#{package.repository}
+							div 
+								=package.description
+							div 
+								i.fa.fa-tag  
+									a(href='#{url}/releases/#{package.latest_release}') #{package.latest_release} 
+									| released #{package.updated_fromnow}
+							div 
+								span
+								i.fa.fa-star  
+									a(href='#{url}/stargazers') #{package.stargazers}
+								span 
+									i.fa.fa-eye  
+										a(href='#{url}/watchers') #{package.watchers}
 
 			.col-md-3
 
