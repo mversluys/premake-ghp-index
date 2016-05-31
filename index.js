@@ -212,17 +212,24 @@ app.post('/api/add/:organization/:repository', function (request, response) {
 });
 
 app.post('/api/update', function (request, response) {
-	console.log('received update ' + JSON.stringify(request.body, null, 4));
 
-	db.one('update package set updated = now() where organization = ${organization} and repository = ${repository})', {
-		organization: request.body.release.repository.owner.login, 
-		repository: request.body.release.repository.name
-	}).then(function (data) {
-		response.status(200).end();
-	}).catch(function (error) {
-		console.log('update of ' + request.body.release.repository.full_name + 'failed .. ' + error);
-		response.status(500).end('Uh oh. Internal server error.');
-	});
+	if (request.body.release) {
+		db.one('update package set updated = now() where organization = ${organization} and repository = ${repository})', {
+			organization: request.body.release.repository.owner.login, 
+			repository: request.body.release.repository.name
+		}).then(function (data) {
+			response.status(200).end();
+		}).catch(function (error) {
+			console.log('update of ' + request.body.release.repository.full_name + 'failed .. ' + error);
+			response.status(500).end('Uh oh. Internal server error.');
+		});
+	}
+	else if (request.body.repository) {
+		console.log('received repository ping ' + request.body.repository.full_name);
+	}
+	else {
+		console.log('received unhandled update ' + JSON.stringify(request.body));
+	}
 });
 
 // view a package
