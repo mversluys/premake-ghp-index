@@ -212,7 +212,7 @@ app.post('/api/add/:organization/:repository', function (request, response) {
 });
 
 app.post('/api/update', function (request, response) {
-	console.log('received update ' .. JSON.stringify(request.body, null, 4));
+	console.log('received update ' + JSON.stringify(request.body, null, 4));
 
 	db.one('update package set updated = now() where organization = ${organization} and repository = ${repository})', {
 		organization: request.body.release.repository.owner.login, 
