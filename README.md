@@ -18,8 +18,7 @@ Use node package manager to install dependencies
   npm install
 
 
-Setup GitHub application access
-
+Setup a GitHub application access
 
 Install the database schema
 
@@ -29,18 +28,8 @@ Set the following environment variables
   GITHUB_CLIENT_ID={application id for OAuth access GitHub}
   GITHUB_CLIENT_SECRET={application secret for OAuth access to GitHub}
   GITHUB_API={url of the GitHub API, defaults to https://api.github.com, change if using GitHub enterprise}
-
   DATABASE_URL={url to connect to the database}
 
 ## Running locally using node
 
   node index.js
-
-
-## Running locally using foreman
-
-
-## Running in Heroku
-
-
-

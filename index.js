@@ -173,35 +173,49 @@ app.post('/api/add/:organization/:repository', function (request, response) {
 		var repo = gh.getRepo(request.params.organization, request.params.repository);
 		// see if the repository exists
 		repo.getDetails().then(function (result) {
+			var details = result.data;
 			//console.log('found on github ... ' + JSON.stringify(result.data, null, 4));
 			// check to see if there's a premake5-ghp.lua file in the root
 			repo.getContents('master', 'premake5-ghp.lua').then(function (result) {
-				console.log('found on github ... ' + JSON.stringify(result.data, null, 4));
-				// install a webhook so we'll be notified when there are new releases
-				repo.createHook({ 
-					name: 'web', 
-					active: true,
-					config: { 
-						url: base_url + '/api/update',
-						content_type: 'json',
-					}, 
-					events: [ 'release' ] 
-				}).then(function (result) {
-					db.any('insert into package (organization, repository) values (${organization}, ${repository}) on conflict do nothing', {
-						organization: request.params.organization, 
-						repository: request.params.repository
-					}).then(function (data) {
-						response.status(200).end();
+				//console.log('found on github ... ' + JSON.stringify(result.data, null, 4));
+
+				// check to see if there's a release
+				repo.getRelease('latest').then(function (result) {
+					var release = result.data;
+
+					// install a webhook so we'll be notified when there are new releases
+					repo.createHook({ 
+						name: 'web', 
+						active: true,
+						config: { 
+							url: base_url + '/api/update',
+							content_type: 'json',
+						}, 
+						events: [ 'release' ] 
+					}).then(function (result) {
+						db.any('insert into package (organization, repository, description, latest_release, stargazers, watchers) values (${organization}, ${repository}, ${description}, ${latest_release}, ${stargazers}, ${watchers}) on conflict do nothing', {
+							organization: request.params.organization, 
+							repository: request.params.repository,
+							description: details.description,
+							latest_release: release.tag_name,
+							stargazers: details.stargazers_count,
+							watchers: details.subscribers_count
+						}).then(function (data) {
+							response.status(200).end();
+						}).catch(function (error) {
+							console.log('database insert failed .. ' + error);
+							response.status(500).end('Uh oh. Internal server error.');
+						});
 					}).catch(function (error) {
-						console.log('database insert failed .. ' + error);
-						response.status(500).end('Uh oh. Internal server error.');
+						//console.log('installation of webhook failed .. ' + error);
+						response.status(404).end('Hook could not be installed for repository ' + request.params.organization + '/' + request.params.repository + '.');
 					});
 				}).catch(function (error) {
-					console.log('installation of webhook failed .. ' + error);
-					response.status(404).end('Hook could not be installed for repository ' + request.params.organization + '/' + request.params.repository + '.');
+					//console.log('lookup of release failed .. ' + error);
+					response.status(404).end('Repository ' + request.params.organization + '/' + request.params.repository + ' does not have a latest release.');
 				});
 			}).catch(function (error) {
-				console.log('lookup of premake5-ghp.lua failed .. ' + error);
+				//console.log('lookup of premake5-ghp.lua failed .. ' + error);
 				response.status(404).end('Repository ' + request.params.organization + '/' + request.params.repository + ' does not have premake5-ghp.lua at it\'s root.');
 			});
 		}).catch(function (error) {
@@ -211,13 +225,16 @@ app.post('/api/add/:organization/:repository', function (request, response) {
 	});
 });
 
+// TOOD: this needs to be secured (using the secret and verification) or don't trust the data that's been supplied
 app.post('/api/update', function (request, response) {
-
-	console.log('received update ' + JSON.stringify(request.body, null, 4));
+	//console.log('received update ' + JSON.stringify(request.body, null, 4));
 	if (request.body.release) {
-		db.none('update package set updated = now() where organization = ${organization} and repository = ${repository}', {
+		db.none('update package set updated = now(), description = ${description}, stargazers = ${stargazers}, watchers = ${watchers} where organization = ${organization} and repository = ${repository}', {
 			organization: request.body.repository.owner.login, 
-			repository: request.body.repository.name
+			repository: request.body.repository.name,
+			description: request.body.repository.description,
+			stargazers: request.body.repository.stargazers_count,
+			watchers: request.body.repository.subscribers_count
 		}).then(function (data) {
 			response.status(200).end();
 		}).catch(function (error) {
@@ -227,9 +244,11 @@ app.post('/api/update', function (request, response) {
 	}
 	else if (request.body.repository) {
 		console.log('received repository ping ' + request.body.repository.full_name);
+		response.status(200).end();
 	}
 	else {
 		console.log('received unhandled update ' + JSON.stringify(request.body));
+		response.status(400).end();
 	}
 });
 
@@ -308,7 +327,6 @@ app.delete('/:organization/:repository', function (request, response) {
 	// sucess, redirect to home
 	response.redirect('/');
 });
-
 
 
 //------------------------------------------------------------------------------

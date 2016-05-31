@@ -21,13 +21,18 @@ create table package (
 	id serial primary key,
 	organization text not null,
 	repository text not null,
+	description text not null,
+	latest_release text not null,
+	stargazers integer not null default 0,
+	watchers integer not null default 0,
 	created timestamp not null default current_timestamp,
 	updated timestamp not null default current_timestamp,
 	unique(organization, repository));	
 
 create index package_organization_idx on package(organization);
+create index package_updated_idx on package(updated);
 
--- labels (for the future)
+-- labels (for the future?)
 
 create table label (
 	id serial primary key,
