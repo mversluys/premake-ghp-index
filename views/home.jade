@@ -24,18 +24,30 @@ block content
 						span(aria-hidden='true') &times;
 					h4.modal-title Add a new package
 				.modal-body
+					p Please supply the GitHub organization and repository of the package.
 					form(id='addForm', method='post')
-						//input#image_url(type='hidden', name='image_url', value=whisky ? '#{whisky.image_url}' : undefined)
-						//input#distillery(type='hidden', name='distillery', value='#{distillery.id}')
 						.form-group
-							label.control-label(for='organization') Organization
-							input#name.form-control(type='text', name='organization')
+							input#organization.form-control(type='text', name='organization', placeholder='Organization')
 						.form-group
-							label.control-label(for='repository') Repository
-							input#name.form-control(type='text', name='repository')
+							input#repository.form-control(type='text', name='repository', placeholder='Repository')
+					.alert.alert-info 
+						p The repository must contain premake5-ghp.lua at it's root.
+						p Your account must have access to install a hook into the repository.
 				.modal-footer
 					button.btn.btn-primary(id='addSubmit', type='button', data-dismiss='modal') Ok
 					button.btn.btn-default(type='button', data-dismiss='modal') Cancel
+
+	.modal.fade(id='addFailed', tabindex='-1', role='dialog', aria-labelledby='addFailedLabel')
+		.modal-dialog(role='document')
+			.modal-content
+				.modal-header
+					button.close(type='button', data-dismiss='modal', aria-label='Close')
+						span(aria-hidden='true') &times;
+					h4.modal-title(id='addFailedLabel') Unable to add package
+				.modal-body
+					.alert.alert-danger#addFailedMessage
+				.modal-footer
+					button.btn.btn-default(type='button', data-dismiss='modal') Ok
 
 	.container
 
@@ -69,11 +81,16 @@ block content
 					i.fa.fa-calendar.fa-2x
 					span 0 package usage
 
-
+block script
 	script.
 		$(function () {
-
 			$('#addSubmit').click(function (e) {
-
+				var package = $('#addForm input#organization').val() + '/' + $('#addForm input#repository').val();
+				$.post('/api/add/' + package).done(function(data) {
+					window.location.href = '/' + package;
+				}).fail(function (data) {
+					$('#addFailedMessage').text(data.responseText);
+					$('#addFailed').modal();
+				});
 			});
 		});
