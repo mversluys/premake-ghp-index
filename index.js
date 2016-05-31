@@ -215,7 +215,7 @@ app.post('/api/update', function (request, response) {
 
 	console.log('received update ' + JSON.stringify(request.body, null, 4));
 	if (request.body.release) {
-		db.one('update package set updated = now() where organization = ${organization} and repository = ${repository}', {
+		db.none('update package set updated = now() where organization = ${organization} and repository = ${repository}', {
 			organization: request.body.repository.owner.login, 
 			repository: request.body.repository.name
 		}).then(function (data) {
