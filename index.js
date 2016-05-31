@@ -215,13 +215,13 @@ app.post('/api/update', function (request, response) {
 
 	console.log('received update ' + JSON.stringify(request.body, null, 4));
 	if (request.body.release) {
-		db.one('update package set updated = now() where organization = ${organization} and repository = ${repository})', {
+		db.one('update package set updated = now() where organization = ${organization} and repository = ${repository}', {
 			organization: request.body.repository.owner.login, 
 			repository: request.body.repository.name
 		}).then(function (data) {
 			response.status(200).end();
 		}).catch(function (error) {
-			console.log('update of ' + request.body.repository.full_name + 'failed .. ' + error);
+			console.log('update of ' + request.body.repository.full_name + ' failed .. ' + error);
 			response.status(500).end('Uh oh. Internal server error.');
 		});
 	}
