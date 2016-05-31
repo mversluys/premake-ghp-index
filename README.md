@@ -15,12 +15,16 @@ The following software is required to run the index
 
 Use node package manager to install dependencies
 
-  npm install
+```bash
+npm install
+```
 
 Use psql to setup the database
 
-  > psql -c "create database premake_ghp;"
-  > psql -d premake_ghp -f index.sql
+```bash
+psql -c "create database premake_ghp;"
+psql -d premake_ghp -f index.sql
+```
 
 A different database name (premake_ghp) can be used if you prefer, DATABASE_URL below needs to match.
 
@@ -30,18 +34,24 @@ On your GitHub account, register an application.
 
 Setup environment variables
 
-  GITHUB_CLIENT_ID={application id for OAuth access GitHub}
-  GITHUB_CLIENT_SECRET={application secret for OAuth access to GitHub}
-  DATABASE_URL=postgres:///premake_ghp
-  BASE_URL=http://localhost:5000
+```bash
+GITHUB_CLIENT_ID={application id for OAuth access GitHub}
+GITHUB_CLIENT_SECRET={application secret for OAuth access to GitHub}
+DATABASE_URL=postgres:///premake_ghp
+BASE_URL=http://localhost:5000
+```
 
 It's recomended to place them into .env then import them before running node
 
-  export $(cat .env | xargs)
+```bash
+export $(cat .env | xargs)
+```
 
 Running locally using node
 
-  node index.js
+```bash
+node index.js
+```
 
 ## Running in Heroku
 
