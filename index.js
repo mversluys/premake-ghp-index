@@ -226,7 +226,9 @@ app.post('/api/update', function (request, response) {
 // view a package
 
 getReadme = function (ref, raw, cb) {
-	return this._request('GET', '/repos/' + this.__fullname + '/readme', { ref }, cb, raw);
+	return this._request('GET', `/repos/${this.__fullname}/readme`, {
+		ref
+	}, cb, raw);
 }
 
 app.get('/:organization/:repository', function (request, response) {
