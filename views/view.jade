@@ -22,80 +22,85 @@ append style
 block content
 
 	.container
+		if error
+			.alert.alert-danger 
+				each line in error
+					p
+						=line
+		else
+			.row
+				.col-md-8
+					h2 
+						a(href=repo.html_url) #{repo.full_name}
+					h4 #{repo.description}
+					.soft-break
+					if readme
+						!=readme.content_html
+					else
+						.hard-break
+						.alert.alert-danger could not find a README in the repository
 
-		.row
-			.col-md-8
-				h2 
-					a(href=repo.html_url) #{repo.full_name}
-				h4 #{repo.description}
-				.soft-break
-				if readme
-					!=readme.content_html
-				else
+				.col-md-4
 					.hard-break
-					.alert.alert-danger could not find a README in the repository
-
-			.col-md-4
-				.hard-break
-				if release
-					pre.lang-lua ghp.import(
-						span.hljs-string '#{repo.full_name}'
-						| , 
-						span.hljs-string '#{release.tag_name}'
-						| )
-				.hard-break
-				if repo.parent
-					p fork of 
-						a(href=repo.parent.html_url) #{repo.parent.full_name}
-					.soft-break
-				p
-					i.fa.fa-star.fa-fw
-					| &nbsp;
-					a(href=repo.html_url + '/stargazers') #{repo.stargazers_count} stars
-				.soft-break
-				p
-					i.fa.fa-eye.fa-fw 
-					| &nbsp;
-					a(href=repo.html_url + '/watchers') #{repo.subscribers_count} watchers
-				.hard-break
-				p Language #{repo.language}
-				if repo.has_issues
+					if release
+						pre.lang-lua ghp.import(
+							span.hljs-string '#{repo.full_name}'
+							| , 
+							span.hljs-string '#{release.tag_name}'
+							| )
+					.hard-break
+					if repo.parent
+						p fork of 
+							a(href=repo.parent.html_url) #{repo.parent.full_name}
+						.soft-break
+					p
+						i.fa.fa-star.fa-fw
+						| &nbsp;
+						a(href=repo.html_url + '/stargazers') #{repo.stargazers_count} stargazers
 					.soft-break
 					p
-						a(href=repo.html_url + '/issues') #{repo.open_issues} open issues
-				if repo.has_wiki
-					.soft-break
-					p
-						a(href=repo.html_url + '/wiki')
-							| wiki documentation 
-				.hard-break
-				if release
-					p
-						a(href=release.html_url) #{release.tag_name}
-						|  is the latest release
-					.soft-break
-					p published #{release.published_at_fromnow}
-					.soft-break
-					p by 
-						a(href=release.author.html_url) #{release.author.login}
-					.soft-break
-					p see other 
-						a(href=repo.html_url + '/releases') releases
-				else
-					.alert.alert-danger there are no published 
-						a(href=repo.html_url + '/releases') releases
+						i.fa.fa-eye.fa-fw 
+						| &nbsp;
+						a(href=repo.html_url + '/watchers') #{repo.subscribers_count} watchers
+					.hard-break
+					p Language #{repo.language}
+					if repo.has_issues
+						.soft-break
+						p
+							a(href=repo.html_url + '/issues') #{repo.open_issues} open issues
+					if repo.has_wiki
+						.soft-break
+						p
+							a(href=repo.html_url + '/wiki')
+								| wiki documentation 
+					.hard-break
+					if release
+						p
+							a(href=release.html_url) #{release.tag_name}
+							|  is the latest release
+						.soft-break
+						p published #{release.published_at_fromnow}
+						.soft-break
+						p by 
+							a(href=release.author.html_url) #{release.author.login}
+						.soft-break
+						p see other 
+							a(href=repo.html_url + '/releases') releases
+					else
+						.alert.alert-danger there are no published 
+							a(href=repo.html_url + '/releases') releases
 
-				.hard-break
-				h3 statistics
-				.well
-					i.fa.fa-calendar.fa-2x
-					span usage last week
+					.hard-break
+					h3 statistics
+					.well
+						i.fa.fa-calendar.fa-2x
+						span usage last week
 
-				.well
-					i.fa.fa-calendar.fa-2x
-					span usage last month
+					.well
+						i.fa.fa-calendar.fa-2x
+						span usage last month
 
-				.well
-					i.fa.fa-calendar.fa-2x
-					span lifetime usage
+					.well
+						i.fa.fa-calendar.fa-2x
+						span lifetime usage
 

@@ -51,7 +51,11 @@ var GitHubStrategy = require('passport-github2').Strategy;
 passport.use(new GitHubStrategy({
 		clientID: process.env.GITHUB_CLIENT_ID,
 		clientSecret: process.env.GITHUB_CLIENT_SECRET,
-		callbackURL: base_url + '/api/auth-callback'
+		callbackURL: base_url + '/api/auth-callback',
+		authorizationURL: process.env.GITHUB_OAUTH ? process.env.GITHUB_OAUTH + '/authorize' : undefined,
+		tokenURL: process.env.GITHUB_OAUTH ? process.env.GITHUB_OAUTH + '/access_token' : undefined,
+		userProfileURL: process.env.GITHUB_API ? process.env.GITHUB_API + '/user' : undefined,
+		userEmailURL: process.env.GITHUB_API ? process.env.GITHUB_API + '/user/emails' : undefined
 	},
 	function (accessToken, refreshToken, profile, done) {
 		// pause, dramatic
@@ -102,26 +106,56 @@ marked.setOptions({
 //------------------------------------------------------------------------------
 // routes
 
-// static pages
+// main pages
 
 app.get('/', function (request, response) {
 
-	db.any('select organization, repository, description, latest_release, stargazers, watchers, updated from package order by updated desc limit 9')
-	.then(function (data) {
-		for (var i = 0; i < data.length; ++i) {
-			data[i].updated_fromnow = moment(data[i].updated).fromNow();
+	Promise.all([
+		db.one('select count(*) from package'),
+		db.any('select organization, repository, description, latest_release, stargazers, watchers, updated from package order by updated desc limit 9')
+	]).then(function (results) {
+		var count = results[0];
+		var recent = results[1];
+		for (var i = 0; i < recent.length; ++i) {
+			recent[i].updated_fromnow = moment(recent[i].updated).fromNow();
 		}
-		response.render('home', { user: request.user, recent: data });
+		response.render('home', { user: request.user, count: count.count, recent: recent });
 	}).catch(function (error) {
-		console.log('retrieving recent packages failed ' + error);
+		console.log('retrieving information from the database failed ' + error);
 		response.status(500).end('Uh oh. Internal server error.');
 	});
 });
 
-// add a new package ...
+function search(request, response, query) {
+	db.any('select organization, repository, description, latest_release, updated, stargazers, watchers from package where organization ilike ${query} or repository ilike ${query} or description ilike ${query} order by stargazers desc, watchers desc, organization asc, repository asc limit 20', {
+		query: '%' + query.replace('%', '%%') + '%'
+	}).then(function (results) {
+		for (var i = 0; i < results.length; ++i) {
+			results[i].updated_fromnow = moment(results[i].updated).fromNow();
+		}
+		response.render('search', { user: request.user, query: query, results: results });
+	}).catch(function (error) {
+		console.log('searching the database failed ' + error);
+		response.status(500).end('Uh oh. Internal server error.');
+	});
+}
 
-app.get('/add', function (request, response) {
-	response.render('add', { user: request.user });
+app.get('/search', function (request, response) {
+	if (request.query.q) {
+		search(request, response, request.query.q);
+	}
+	else {
+		response.render('search', { user: request.user, error: 'expected a search query term' });
+	}	
+});
+
+app.get('/search/:query', function (request, response) {
+	if (request.params.query) {
+		search(request, response, request.params.query);
+	}
+	else {
+		response.render('search', { user: request.user, error: 'expected a search query term' });
+	}	
 });
 
 // user management
@@ -150,7 +184,6 @@ app.get('/api/auth-callback',
 		request.session.notice = "You logged in as " + name + "!";
 	}
 );
-
 
 app.get('/api/use/:organization/:repository', function (request, response) {
 	var organization = request.params.organization;
@@ -193,32 +226,60 @@ app.post('/api/add/:organization/:repository', function (request, response) {
 				repo.getRelease('latest').then(function (result) {
 					var release = result.data;
 
-					// install a webhook so we'll be notified when there are new releases
-					repo.createHook({ 
-						name: 'web', 
-						active: true,
-						config: { 
-							url: base_url + '/api/update',
-							content_type: 'json',
-						}, 
-						events: [ 'release' ] 
-					}).then(function (result) {
-						db.any('insert into package (organization, repository, description, latest_release, stargazers, watchers) values (${organization}, ${repository}, ${description}, ${latest_release}, ${stargazers}, ${watchers}) on conflict do nothing', {
-							organization: request.params.organization, 
-							repository: request.params.repository,
-							description: details.description,
-							latest_release: release.tag_name,
-							stargazers: details.stargazers_count,
-							watchers: details.subscribers_count
-						}).then(function (data) {
-							response.status(200).end();
-						}).catch(function (error) {
-							console.log('database insert failed .. ' + error);
-							response.status(500).end('Uh oh. Internal server error.');
-						});
+					// look to see if there's a webhook
+					repo.listHooks().then(function (result) {
+						console.log('found hooks ' + JSON.stringify(result.data, null, 4));
+
+						function add() {
+							db.any('insert into package (organization, repository, description, latest_release, stargazers, watchers, updated) values (${organization}, ${repository}, ${description}, ${latest_release}, ${stargazers}, ${watchers}, ${updated}) on conflict do nothing', {
+								organization: request.params.organization, 
+								repository: request.params.repository,
+								description: details.description,
+								latest_release: release.tag_name,
+								stargazers: details.stargazers_count,
+								watchers: details.subscribers_count,
+								updated: release.published_at
+							}).then(function (data) {
+								response.status(200).end();
+							}).catch(function (error) {
+								console.log('database insert failed .. ' + error);
+								response.status(500).end('Uh oh. Internal server error.');
+							});
+						}
+
+						var hook = null;
+
+						// look to see if our hook was installed
+						for (var i = 0; i < result.data.length; ++i) {
+							var h = result.data[i];
+							if (h.config && h.config.url == base_url + '/api/update' && h.config.content_type == 'json') {
+								console.log('our hook was already installed!');
+								hook = h;
+							}
+						}
+
+						if (!!hook) {
+							add();
+						} else {
+							// couldn't find it, try to install a new one
+							repo.createHook({ 
+								name: 'web', 
+								active: true,
+								config: { 
+									url: base_url + '/api/update',
+									content_type: 'json',
+								}, 
+								events: [ 'release' ] 
+							}).then(function (result) {
+								add();
+							}).catch(function (error) {
+								console.log('installation of webhook failed .. ' + error);
+								response.status(404).end('Hook could not be installed for repository ' + request.params.organization + '/' + request.params.repository + '.');
+							});
+						}
 					}).catch(function (error) {
-						//console.log('installation of webhook failed .. ' + error);
-						response.status(404).end('Hook could not be installed for repository ' + request.params.organization + '/' + request.params.repository + '.');
+						console.log('could not retrieve hooks .. ' + error);
+						response.status(404).end('You don\'t have access to the hooks for repository ' + request.params.organization + '/' + request.params.repository + '.');
 					});
 				}).catch(function (error) {
 					//console.log('lookup of release failed .. ' + error);
@@ -239,12 +300,14 @@ app.post('/api/add/:organization/:repository', function (request, response) {
 app.post('/api/update', function (request, response) {
 	//console.log('received update ' + JSON.stringify(request.body, null, 4));
 	if (request.body.release) {
-		db.none('update package set updated = now(), description = ${description}, stargazers = ${stargazers}, watchers = ${watchers} where organization = ${organization} and repository = ${repository}', {
+		db.none('update package set updated = ${updated}, latest_release = ${latest_release}, description = ${description}, stargazers = ${stargazers}, watchers = ${watchers} where organization = ${organization} and repository = ${repository}', {
 			organization: request.body.repository.owner.login, 
 			repository: request.body.repository.name,
 			description: request.body.repository.description,
 			stargazers: request.body.repository.stargazers_count,
-			watchers: request.body.repository.subscribers_count
+			watchers: request.body.repository.subscribers_count,
+			latest_release: request.body.release.tag_name,
+			updated: request.body.release.published_at
 		}).then(function (data) {
 			response.status(200).end();
 		}).catch(function (error) {
@@ -272,7 +335,14 @@ getReadme = function (ref, raw, cb) {
 
 app.get('/:organization/:repository', function (request, response) {
 
-	var gh = new github({ token: request.user.access_token }, process.env.GITHUB_API);
+	var gh;
+	if (request.user && request.user.access_token) {
+		gh = new github({ token: request.user.access_token }, process.env.GITHUB_API);
+	} 
+	else {
+		gh = new github({}, process.env.GITHUB_API);
+	}
+
 	var repo = gh.getRepo(request.params.organization, request.params.repository);
 
 	var data = { user: request.user };
@@ -324,7 +394,16 @@ app.get('/:organization/:repository', function (request, response) {
 		});
 	}).catch(function (error) {
 		console.log('repo retrieve failed: ' + error);
-		response.status(500).end(error);
+
+		error = [];
+		error.push('Unable to retrieve information about repository ' + request.params.organization + '/' + request.params.repository + '.'); 
+		if (request.user) {
+			error.push('You account doesn\'t have access to this repository, or perhaps it doesn\'t exist.');
+		} 
+		else {
+			error.push('This repository may require authentication, try logging in.');
+		}
+		response.render('view', { user: request.user, error: error }); 
 	});
 });
 

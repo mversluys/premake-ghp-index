@@ -5,13 +5,29 @@ block vars
 
 append style
 	style.
-		h1 {
+		h1.jumbo {
 			text-align: center;
 			margin-bottom: 40px;
 		}
 		h3 {
 			padding-bottom: 5px;
 			border-bottom: 1px solid #ddd;
+		}
+		h4.package {
+			margin-bottom: 2px;		
+		}
+		.description {
+			font-size: 80%;
+			padding-left: 23px;
+			color: #777;
+			white-space: nowrap; 
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.info {
+			font-size: 80%;
+			padding-left: 23px;
+			color: #777;
 		}
 
 block content
@@ -53,34 +69,36 @@ block content
 
 		.row
 			.col-md-12
-				h1 
-					a(href='https://github.com/mversluys/premake-ghp') premake-ghp 
-					| is a package manager for 
+				h1.jumbo 
+					a(href='https://github.com/mversluys/premake-ghp') premake-ghp
+					|  : github packages for 
 					a(href='https://premake.github.io') premake
 
 		.row
 			.col-md-9
-				h3 packages used a lot this week
+				h3 actively used packages
 				h3 recently updated packages
 				.row
 					each package in recent
 						- var url = 'http://github.com/' + package.organization + '/' + package.repository
 						.col-sm-4
-							div 
-								a(href='#{url}') #{package.organization}/#{package.repository}
-							div 
+							h4.package
+								i.fa.fa-cube.fa-fw 
+								a(href='/#{package.organization}/#{package.repository}') #{package.organization}/#{package.repository}
+							div.description
 								=package.description
-							div 
-								i.fa.fa-tag  
-									a(href='#{url}/releases/#{package.latest_release}') #{package.latest_release} 
-									| released #{package.updated_fromnow}
-							div 
+							div.info
 								span
-								i.fa.fa-star  
-									a(href='#{url}/stargazers') #{package.stargazers}
+									i.fa.fa-star
+									|  #{package.stargazers} stargazers
 								span 
-									i.fa.fa-eye  
-										a(href='#{url}/watchers') #{package.watchers}
+									i.fa.fa-eye
+									|  #{package.watchers} watchers
+							div.info
+								i.fa.fa-tag
+								strong  #{package.latest_release} 
+								| published 
+								strong #{package.updated_fromnow}
 
 			.col-md-3
 
@@ -92,13 +110,10 @@ block content
 						a(href='/login') Sign in to GitHub.
 
 				.well
-					i.fa.fa-archive.fa-2x
-					span 0 total packages
-
-
-				.well
-					i.fa.fa-calendar.fa-2x
-					span 0 package usage
+					span(style='font-size: 200%')
+						i.fa.fa-cube
+						|  #{count}
+					span  total packages
 
 block script
 	script.

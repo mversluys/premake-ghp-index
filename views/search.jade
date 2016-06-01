@@ -1,0 +1,52 @@
+extends ./layout.jade
+
+block vars
+	- var nav = 'search'
+
+
+append style
+	style.
+		.table-nonfluid {
+			width: auto !important;
+		}
+		.description {
+			font-size: 80%;
+			color: #777;
+			white-space: nowrap; 
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.info {
+			font-size: 80%;
+			color: #777;
+		}
+
+block content
+
+	.container
+		if error
+			.alert.alert-danger 
+				=error
+		else
+			h3 searching for ... 
+				code #{query}
+
+			table.table.table-nonfluid
+				each result in results
+					tr
+						td
+							i.fa.fa-cube
+							| &nbsp;
+							a(href='/' + result.organization + '/' + result.repository) #{result.organization}/#{result.repository}
+						td
+							div #{result.description}
+							div.info
+								i.fa.fa-star.fa-fw 
+								span #{result.stargazers}
+								| &emsp;
+								i.fa.fa-eye.fa-fw 
+								span #{result.watchers}
+								| &emsp;
+								i.fa.fa-tag.fa-fw
+								span #{result.latest_release} published #{result.updated_fromnow}
+
