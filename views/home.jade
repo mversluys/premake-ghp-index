@@ -29,6 +29,12 @@ append style
 			padding-left: 23px;
 			color: #777;
 		}
+		div.package {
+			padding-bottom: 10px;
+		}
+		div.package:hover {
+			background-color: rgb(245, 245, 245);
+		}
 
 block content
 
@@ -81,7 +87,7 @@ block content
 				.row
 					each package in recent
 						- var url = 'http://github.com/' + package.organization + '/' + package.repository
-						.col-sm-4
+						.col-sm-4.package
 							h4.package
 								i.fa.fa-cube.fa-fw 
 								a(href='/#{package.organization}/#{package.repository}') #{package.organization}/#{package.repository}

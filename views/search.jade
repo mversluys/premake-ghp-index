@@ -31,22 +31,27 @@ block content
 			h3 searching for ... 
 				code #{query}
 
-			table.table.table-nonfluid
-				each result in results
-					tr
-						td
-							i.fa.fa-cube
-							| &nbsp;
-							a(href='/' + result.organization + '/' + result.repository) #{result.organization}/#{result.repository}
-						td
-							div #{result.description}
-							div.info
-								i.fa.fa-star.fa-fw 
-								span #{result.stargazers}
-								| &emsp;
-								i.fa.fa-eye.fa-fw 
-								span #{result.watchers}
-								| &emsp;
-								i.fa.fa-tag.fa-fw
-								span #{result.latest_release} published #{result.updated_fromnow}
+			if results.length
+				table.table.table-hover.table-condensed
+					each result in results
+						tr
+							td
+								i.fa.fa-cube
+								| &nbsp;
+								a(href='/' + result.organization + '/' + result.repository) #{result.organization}/#{result.repository}
+							td
+								div #{result.description}
+								div.info
+									i.fa.fa-star.fa-fw 
+									span #{result.stargazers}
+									| &emsp;
+									i.fa.fa-eye.fa-fw 
+									span #{result.watchers}
+									| &emsp;
+									i.fa.fa-tag.fa-fw
+									strong #{result.latest_release} 
+									| published 
+									strong #{result.updated_fromnow}
+			else
+				.alert.alert-info Your search ended, and no packages could be found that contain '#{query}' in the organiztion, repository or description of a package.
 

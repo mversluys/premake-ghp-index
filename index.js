@@ -14,7 +14,7 @@ var express = require('express'),
 //------------------------------------------------------------------------------
 // global configuration
 
-var base_url = 'http://premake-ghp.herokuapp.com';
+var base_url = 'http://www.premake-ghp.com';
 
 if (process.env.BASE_URL) {
 	base_url = process.env.BASE_URL;
