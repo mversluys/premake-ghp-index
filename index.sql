@@ -40,14 +40,14 @@ create table label (
 
 create table package_label (
 	id serial primary key,
-	package integer references package(id) on delete cascade,
-	label integer references label(id) on delete cascade);
+	package integer not null references package(id) on delete cascade,
+	label integer not null references label(id) on delete cascade);
 
 -- releases
 
 create table release (
 	id serial primary key,
-	package integer references package(id) on delete cascade,
+	package integer not null references package(id) on delete cascade,
 	release text not null,
 	unique(package, release));
 
@@ -62,8 +62,9 @@ create table consumer (
 -- usage fact table
 
 create table usage (
-	day integer references day(id) on delete cascade,
-	release integer references release(id) on delete cascade,
-	consumer integer references consumer(id) on delete cascade,
+	day integer not null references day(id) on delete cascade,
+	release integer not null references release(id) on delete cascade,
+	consumer integer not null references consumer(id) on delete cascade,
 	downloaded integer not null default 0,
-	cached integer not null default 0);
+	cached integer not null default 0,
+	unique(day, release, consumer));

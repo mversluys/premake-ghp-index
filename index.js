@@ -185,21 +185,134 @@ app.get('/api/auth-callback',
 	}
 );
 
-app.get('/api/use/:organization/:repository', function (request, response) {
+function get_day(date) {
+	//console.log('get day ' + date);
+	return new Promise(function (resolve, reject) {
+		db.one('select id from day where date = ${date}', { 
+			date: date
+		}).then(function (day) {
+			//console.log('resolved day ' + day.id);
+			resolve(day.id);
+		}).catch(function (error) {
+			//console.log('failed to select day ' + error);
+			db.one('insert into day (date, day_of_week, day, month, year) values (${date}, ${day_of_week}, ${day}, ${month}, ${year}) returning id', {
+				date: date,
+				day: date.getTime() / 1000 / 60 / 60 / 24,
+				day_of_week: date.getDay(),
+				month: date.getMonth(),
+				year: date.getFullYear()
+			}).then(function (day) {
+				//console.log('created day ' + date);
+				resolve(day.id);
+			}).catch(function (error) {
+				console.log('failed to create day ' + error);
+				reject(error);
+			});
+		});
+	});
+}
+
+function get_release(package, release) {
+	//console.log('get release %s %s', package, release);
+	return new Promise(function (resolve, reject) {
+		db.one('select id from release where package = ${package} and release = ${release}', { 
+			package: package,
+			release: release
+		}).then(function (release) {
+			//console.log('resolved release ' + release.id);
+			resolve(release.id);
+		}).catch(function (error) {
+			//console.log('failed to select release ' + error);
+			db.one('insert into release (package, release) values (${package}, ${release}) returning id', {
+				package: package,
+				release: release,
+			}).then(function (release) {
+				//console.log('created release ' + release.id);
+				resolve(release.id);
+			}).catch(function (error) {
+				console.log('failed to create release ' + error);
+				reject(error);
+			});
+		});
+	});
+}
+
+function get_consumer(organization, repository) {
+	//console.log('get consumer %s %s', organization, repository);
+	return new Promise(function (resolve, reject) {
+		db.one('select id from consumer where organization = ${organization} and repository = ${repository}', { 
+			organization: organization,
+			repository: repository
+		}).then(function (consumer) {
+			//console.log('resolved consumer ' + consumer.id);
+			resolve(consumer.id);
+		}).catch(function (error) {
+			//console.log('failed to select consumer ' + error);
+			db.one('insert into consumer (organization, repository) values (${organization}, ${repository}) returning id', {
+				organization: organization,
+				repository: repository,
+			}).then(function (consumer) {
+				//console.log('created consumer ' + consumer.id);
+				resolve(consumer.id);
+			}).catch(function (error) {
+				console.log('failed to create consumer ' + consumer.id);
+				reject(error);
+			});
+		});
+	});
+}
+
+app.get('/api/use/:organization/:repository/:release', function (request, response) {
 	var organization = request.params.organization;
 	var repository = request.params.repository;
-	var consumer = request.body.consumer.split('/', 2);
+	var release = request.params.release;
+	var consumer = request.query.consumer.split('/', 2);
 
-	// get the package
+	console.log('use %s %s %s %s', organization, repository, release, consumer);
 
-	// get/create the day
+	db.one('select id from package where organization = ${organization} and repository = ${repository}', {
+		organization: organization,
+		repository: repository
+	}).then(function (package) {
 
-	// get/create the release
+		var date = new Date();
+		date.setUTCHours(0, 0, 0, 0);
 
-	// get/create the consumer
+		Promise.all([
+			get_day(date),
+			get_release(package.id, release),
+			get_consumer(consumer[0], consumer[1])
+		]).then(function (results) {
+			var day = results[0];
+			var release = results[1];
+			var consumer = results[2];
+			var downloaded = request.query.cached ? 0 : 1;
+			var cached = request.query.cached ? 1 : 0;
+			//console.log('updating %s %s %s %s %s', day, release, consumer, downloaded, cached);
+			db.none('insert into usage (day, release, consumer, downloaded, cached) \
+					values (${day}, ${release}, ${consumer}, ${downloaded}, ${cached}) \
+					on conflict (day, release, consumer) do update \
+					set downloaded = usage.downloaded + ${downloaded}, cached = usage.cached + ${cached}', {
+				day: day,
+				release: release,
+				consumer: consumer,
+				downloaded: downloaded,
+				cached: cached
+			}).then(function (results) {
+				//console.log('updated usage');
+				response.status(200).end();
+			}).catch(function (error) {
+				console.log('usage insert/update failed ' + error);
+				response.status(500).end('usage insert/update failed ' + error);
+			});
 
-	// update/create the usage
-
+		}).catch(function (error) {
+			response.status(500).end('looking up day/release/consumer failed ' + error);
+		});
+	}).catch(function (error) {
+		// no such package?
+		response.status(404).end();
+	});
 });
 
 app.post('/api/add/:organization/:repository', function (request, response) {
