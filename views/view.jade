@@ -39,7 +39,7 @@ block content
 						.hard-break
 						.alert.alert-danger could not find a README in the repository
 
-				.col-md-4
+				.col-md-4.side-panel
 					.hard-break
 					if release
 						pre.lang-lua ghp.import(
@@ -52,18 +52,20 @@ block content
 						i.fa.fa-github.fa-fw
 						| &nbsp;
 						a(href=repo.html_url) #{repo.full_name}
-						if repo.parent
-							|  fork of 
-							a(href=repo.parent.html_url) #{repo.parent.full_name}
+						.soft-break
+					if repo.parent
+						i.fa.fa-code-fork.fa-fw
+						|  forked from 
+						a(href=repo.parent.html_url) #{repo.parent.full_name}
 						.soft-break
 					p
-						i.fa.fa-star.fa-fw
-						| &nbsp;
-						a(href=repo.html_url + '/stargazers') #{repo.stargazers_count} stargazers
-						| &nbsp;
 						i.fa.fa-eye.fa-fw 
 						| &nbsp;
 						a(href=repo.html_url + '/watchers') #{repo.subscribers_count} watchers
+						| &nbsp;
+						i.fa.fa-star.fa-fw
+						| &nbsp;
+						a(href=repo.html_url + '/stargazers') #{repo.stargazers_count} stargazers
 					.soft-break
 					p Language #{repo.language}
 					if repo.has_issues
@@ -94,7 +96,32 @@ block content
 
 					.hard-break
 					.well
-						i.fa.fa-calendar.fa-2x
-						span  {chart of usage in last week}
+						div usage in the last month
+						div#plot-usage-month
+							svg(style='height:150px')
+					.well
+						div usage in the last year
+						div#plot-usage-year
+							svg(style='height:150px')
 
+block script
+	script.
 
+		function plot(id, data) {
+			var chart = nv.models.multiBarChart()
+				.stacked(true)
+				.showControls(false)
+				.x(function(d) { return new Date(d.x * 1000); })
+				.y(function(d) { return parseInt(d.y); })
+				.showLegend(false); 
+			chart.margin({ 'left': 20, 'right': 20, 'top': 10, 'bottom': 20 });
+			chart.xAxis.tickFormat(function(d) { return d3.time.format('%b %e, %Y')(new Date(d)); })
+			chart.yAxis.tickFormat(d3.format('0.0f'));
+			d3.select(id).datum(data).call(chart);
+			nv.utils.windowResize(chart.update);
+		}
+
+		$(function () {
+			plot('#plot-usage-month svg', !{JSON.stringify(usage_month)});
+			plot('#plot-usage-year svg', !{JSON.stringify(usage_year)});
+		});

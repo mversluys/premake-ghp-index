@@ -102,6 +102,171 @@ marked.setOptions({
 	}
 });
 
+//------------------------------------------------------------------------------
+// utility functions
+
+function db_findcreate_day(date) {
+	//console.log('get day ' + date);
+	return new Promise(function (resolve, reject) {
+		db.one('select id from day where date = ${date}', { 
+			date: date
+		}).then(function (day) {
+			//console.log('resolved day ' + day.id);
+			resolve(day.id);
+		}).catch(function (error) {
+			//console.log('failed to select day ' + error);
+			var m = moment.utc(date.getTime());
+			db.one('insert into day (date, day, week, year, day_of_week, day_of_month, day_of_year, week_of_year, month_of_year) values (${date}, ${day}, ${week}, ${year}, ${day_of_week}, ${day_of_month}, ${day_of_year}, ${week_of_year}, ${month_of_year}) returning id', {
+				date: date,
+				day: Math.floor(date.getTime() / 1000 / 60 / 60 / 24),
+				week: Math.floor((date.getTime() / 1000 / 60 / 60 / 24 + 4) / 7),
+				year: m.year(),
+				day_of_week: m.day(),
+				day_of_month: m.date(),
+				day_of_year: m.dayOfYear(),
+				week_of_year: m.week(),
+				month_of_year: m.month()
+			}).then(function (day) {
+				//console.log('created day ' + date);
+				resolve(day.id);
+			}).catch(function (error) {
+				console.log('failed to create day ' + error);
+				reject(error);
+			});
+		});
+	});
+}
+
+function db_find_package(organization, repository) {
+	return new Promise(function (resolve, reject) {
+		db.one('select id from package where organization = ${organization} and repository = ${repository}', {
+			organization: organization,
+			repository: repository
+		}).then(function (package) {
+			resolve(package);
+		}).catch(function (error) {
+			reject(error);
+		})
+	});
+}
+
+function db_findcreate_release(package, release) {
+	//console.log('get release %s %s', package, release);
+	return new Promise(function (resolve, reject) {
+		db.one('select id from release where package = ${package} and release = ${release}', { 
+			package: package,
+			release: release
+		}).then(function (release) {
+			//console.log('resolved release ' + release.id);
+			resolve(release.id);
+		}).catch(function (error) {
+			//console.log('failed to select release ' + error);
+			db.one('insert into release (package, release) values (${package}, ${release}) returning id', {
+				package: package,
+				release: release,
+			}).then(function (release) {
+				//console.log('created release ' + release.id);
+				resolve(release.id);
+			}).catch(function (error) {
+				console.log('failed to create release ' + error);
+				reject(error);
+			});
+		});
+	});
+}
+
+function db_findcreate_consumer(organization, repository) {
+	//console.log('get consumer %s %s', organization, repository);
+	return new Promise(function (resolve, reject) {
+		db.one('select id from consumer where organization = ${organization} and repository = ${repository}', { 
+			organization: organization,
+			repository: repository
+		}).then(function (consumer) {
+			//console.log('resolved consumer ' + consumer.id);
+			resolve(consumer.id);
+		}).catch(function (error) {
+			//console.log('failed to select consumer ' + error);
+			db.one('insert into consumer (organization, repository) values (${organization}, ${repository}) returning id', {
+				organization: organization,
+				repository: repository,
+			}).then(function (consumer) {
+				//console.log('created consumer ' + consumer.id);
+				resolve(consumer.id);
+			}).catch(function (error) {
+				console.log('failed to create consumer ' + consumer.id);
+				reject(error);
+			});
+		});
+	});
+}
+
+function db_upsert_usage(day, release, consumer, downloaded, cached) {
+	return new Promise(function (resolve, reject) {
+		db.none('insert into usage (day, release, consumer, downloaded, cached) \
+				values (${day}, ${release}, ${consumer}, ${downloaded}, ${cached}) \
+				on conflict (day, release, consumer) do update \
+				set downloaded = usage.downloaded + ${downloaded}, cached = usage.cached + ${cached}', {
+			day: day,
+			release: release,
+			consumer: consumer,
+			downloaded: downloaded,
+			cached: cached
+		}).then(function (results) {
+			resolve();
+		}).catch(function (error) {
+			console.log('usage insert/update failed ' + error);
+			reject(error);
+		});
+	})
+}
+
+function db_get_usage_month(organization, repository) {
+	return new Promise(function (resolve, reject) {
+		db.any('select min(d.date) as day, sum(u.downloaded) as downloaded, sum(u.cached) as cached from usage as u inner join day as d on u.day = d.id inner join release as r on u.release = r.id inner join package as p on r.package = p.id where p.organization = ${organization} and p.repository = ${repository} and d.date > current_date - interval \'1 month\' group by d.day order by d.day;', {
+			organization: organization,
+			repository: repository
+		}).then(function (result) {
+			downloaded = [];
+			cached = [];
+			for (var i = 0; i < result.length; ++i) {
+				var x = Math.floor(result[i].day.getTime() / 1000);
+				downloaded.push( { x: x, y: result[i].downloaded } );
+				cached.push( { x: x, y: result[i].cached } );
+			}
+			resolve([ 
+				{ key: 'downloaded', values: downloaded }, 
+				{ key: 'cached', values: cached } 
+			]);
+		}).catch(function (error) {
+			console.log('failed to retrieve usage for the month ' + error);
+			resolve(null);
+		});
+	});
+}
+
+function db_get_usage_year(organization, repository) {
+	return new Promise(function (resolve, reject) {
+		db.any('select min(d.date) as week, sum(u.downloaded) as downloaded, sum(u.cached) as cached from usage as u inner join day as d on u.day = d.id inner join release as r on u.release = r.id inner join package as p on r.package = p.id where p.organization = ${organization} and p.repository = ${repository} and d.date > current_date - interval \'1 year\' group by d.week order by d.week;', {
+			organization: organization,
+			repository: repository
+		}).then(function (result) {
+			downloaded = [];
+			cached = [];
+			for (var i = 0; i < result.length; ++i) {
+				var x = Math.floor(result[i].week.getTime() / 1000);
+				downloaded.push( { x: x, y: result[i].downloaded } );
+				cached.push( { x: x, y: result[i].cached } );
+			}
+			resolve([ 
+				{ key: 'downloaded', values: downloaded }, 
+				{ key: 'cached', values: cached } 
+			]);
+		}).catch(function (error) {
+			console.log('failed to retrieve usage for the year ' + error);
+			resolve(null);
+		});
+	});
+}
 
 //------------------------------------------------------------------------------
 // routes
@@ -185,133 +350,30 @@ app.get('/api/auth-callback',
 	}
 );
 
-function get_day(date) {
-	//console.log('get day ' + date);
-	return new Promise(function (resolve, reject) {
-		db.one('select id from day where date = ${date}', { 
-			date: date
-		}).then(function (day) {
-			//console.log('resolved day ' + day.id);
-			resolve(day.id);
-		}).catch(function (error) {
-			//console.log('failed to select day ' + error);
-			db.one('insert into day (date, day_of_week, day, month, year) values (${date}, ${day_of_week}, ${day}, ${month}, ${year}) returning id', {
-				date: date,
-				day: date.getTime() / 1000 / 60 / 60 / 24,
-				day_of_week: date.getDay(),
-				month: date.getMonth(),
-				year: date.getFullYear()
-			}).then(function (day) {
-				//console.log('created day ' + date);
-				resolve(day.id);
-			}).catch(function (error) {
-				console.log('failed to create day ' + error);
-				reject(error);
-			});
-		});
-	});
-}
-
-function get_release(package, release) {
-	//console.log('get release %s %s', package, release);
-	return new Promise(function (resolve, reject) {
-		db.one('select id from release where package = ${package} and release = ${release}', { 
-			package: package,
-			release: release
-		}).then(function (release) {
-			//console.log('resolved release ' + release.id);
-			resolve(release.id);
-		}).catch(function (error) {
-			//console.log('failed to select release ' + error);
-			db.one('insert into release (package, release) values (${package}, ${release}) returning id', {
-				package: package,
-				release: release,
-			}).then(function (release) {
-				//console.log('created release ' + release.id);
-				resolve(release.id);
-			}).catch(function (error) {
-				console.log('failed to create release ' + error);
-				reject(error);
-			});
-		});
-	});
-}
-
-function get_consumer(organization, repository) {
-	//console.log('get consumer %s %s', organization, repository);
-	return new Promise(function (resolve, reject) {
-		db.one('select id from consumer where organization = ${organization} and repository = ${repository}', { 
-			organization: organization,
-			repository: repository
-		}).then(function (consumer) {
-			//console.log('resolved consumer ' + consumer.id);
-			resolve(consumer.id);
-		}).catch(function (error) {
-			//console.log('failed to select consumer ' + error);
-			db.one('insert into consumer (organization, repository) values (${organization}, ${repository}) returning id', {
-				organization: organization,
-				repository: repository,
-			}).then(function (consumer) {
-				//console.log('created consumer ' + consumer.id);
-				resolve(consumer.id);
-			}).catch(function (error) {
-				console.log('failed to create consumer ' + consumer.id);
-				reject(error);
-			});
-		});
-	});
-}
-
 app.get('/api/use/:organization/:repository/:release', function (request, response) {
 	var organization = request.params.organization;
 	var repository = request.params.repository;
 	var release = request.params.release;
 	var consumer = request.query.consumer.split('/', 2);
-
 	console.log('use %s %s %s %s', organization, repository, release, consumer);
 
-	db.one('select id from package where organization = ${organization} and repository = ${repository}', {
-		organization: organization,
-		repository: repository
-	}).then(function (package) {
-
+	db_find_package(organization, repository)
+	.then(function (package) {
 		var date = new Date();
 		date.setUTCHours(0, 0, 0, 0);
-
 		Promise.all([
-			get_day(date),
-			get_release(package.id, release),
-			get_consumer(consumer[0], consumer[1])
+			db_findcreate_day(date),
+			db_findcreate_release(package.id, release),
+			db_findcreate_consumer(consumer[0], consumer[1])
 		]).then(function (results) {
-			var day = results[0];
-			var release = results[1];
-			var consumer = results[2];
-			var downloaded = request.query.cached ? 0 : 1;
-			var cached = request.query.cached ? 1 : 0;
-			//console.log('updating %s %s %s %s %s', day, release, consumer, downloaded, cached);
-			db.none('insert into usage (day, release, consumer, downloaded, cached) \
-					values (${day}, ${release}, ${consumer}, ${downloaded}, ${cached}) \
-					on conflict (day, release, consumer) do update \
-					set downloaded = usage.downloaded + ${downloaded}, cached = usage.cached + ${cached}', {
-				day: day,
-				release: release,
-				consumer: consumer,
-				downloaded: downloaded,
-				cached: cached
-			}).then(function (results) {
-				//console.log('updated usage');
-				response.status(200).end();
-			}).catch(function (error) {
-				console.log('usage insert/update failed ' + error);
-				response.status(500).end('usage insert/update failed ' + error);
-			});
-
+			return db_upsert_usage(results[0], results[1], results[2], request.query.cached ? 0 : 1, request.query.cached ? 1 : 0);
+		}).then(function (results) {
+			response.status(200).end();
 		}).catch(function (error) {
-			response.status(500).end('looking up day/release/consumer failed ' + error);
+			response.status(500).end();
 		});
 	}).catch(function (error) {
-		// no such package?
-		response.status(404).end();
+		response.status(404).end('package named ' + organization + '/' + release + ' not found');
 	});
 });
 
@@ -463,24 +525,45 @@ app.get('/:organization/:repository', function (request, response) {
 	// extend GitHub API for retrieving README files
 	repo.getReadme = getReadme;
 
-	//console.log('viewing ' + repo.__fullname);
-	repo.getDetails().then(function (result) {
-		data.repo = result.data;
-		//console.log('details ' + JSON.stringify(details, null, 4));
-		repo.getRelease('latest').then(function (result) {
-			data.release = result.data;
-			data.release.created_at_fromnow = moment(data.release.published_at).fromNow();
-			data.release.published_at_fromnow = moment(data.release.published_at).fromNow();
-			//console.log('release: ' + JSON.stringify(release, null, 4));
-			repo.getReadme(release.tag_name).then(function (result) {
-				data.readme = result.data;
-				data.readme.content_html = marked(new Buffer(data.readme.content, 'base64').toString());
-				//console.log('readme: ' + JSON.stringify(readme, null, 4));
-				response.render('view', data);
-			})
-			.catch(function (error) {
-				//console.log('readme retrieve from ' + release.tag_name + ' failed: ' + error);
-				// couldn't get the README from the release, try the readme from master
+	Promise.all([
+		db_get_usage_month(request.params.organization, request.params.repository),
+		db_get_usage_year(request.params.organization, request.params.repository)
+	]).then(function (results) {
+		//console.log(JSON.stringify(results, null, 4));
+		data.usage_month = results[0];
+		data.usage_year = results[1];
+
+		repo.getDetails().then(function (result) {
+			data.repo = result.data;
+			//console.log('details ' + JSON.stringify(details, null, 4));
+			repo.getRelease('latest').then(function (result) {
+				data.release = result.data;
+				data.release.created_at_fromnow = moment(data.release.published_at).fromNow();
+				data.release.published_at_fromnow = moment(data.release.published_at).fromNow();
+				//console.log('release: ' + JSON.stringify(release, null, 4));
+				repo.getReadme(release.tag_name).then(function (result) {
+					data.readme = result.data;
+					data.readme.content_html = marked(new Buffer(data.readme.content, 'base64').toString());
+					//console.log('readme: ' + JSON.stringify(readme, null, 4));
+					response.render('view', data);
+				})
+				.catch(function (error) {
+					//console.log('readme retrieve from ' + release.tag_name + ' failed: ' + error);
+					// couldn't get the README from the release, try the readme from master
+					repo.getReadme().then(function (result) {
+						data.readme = result.data;
+						data.readme.content_html = marked(new Buffer(data.readme.content, 'base64').toString());
+						//console.log('readme: ' + JSON.stringify(readme, null, 4));
+						response.render('view', data);
+					}).catch(function (error) {
+						//console.log('readme retrieve from master failed: ' + error);
+						response.render('view', data);
+					});
+				});
+			}).catch(function (error) {
+				//console.log('release retrieve failed: ' + error);
+
+				// try the readme from master
 				repo.getReadme().then(function (result) {
 					data.readme = result.data;
 					data.readme.content_html = marked(new Buffer(data.readme.content, 'base64').toString());
@@ -492,31 +575,20 @@ app.get('/:organization/:repository', function (request, response) {
 				});
 			});
 		}).catch(function (error) {
-			//console.log('release retrieve failed: ' + error);
+			console.log('repo retrieve failed: ' + error);
 
-			// try the readme from master
-			repo.getReadme().then(function (result) {
-				data.readme = result.data;
-				data.readme.content_html = marked(new Buffer(data.readme.content, 'base64').toString());
-				//console.log('readme: ' + JSON.stringify(readme, null, 4));
-				response.render('view', data);
-			}).catch(function (error) {
-				//console.log('readme retrieve from master failed: ' + error);
-				response.render('view', data);
-			});
+			error = [];
+			error.push('Unable to retrieve information about repository ' + request.params.organization + '/' + request.params.repository + '.'); 
+			if (request.user) {
+				error.push('You account doesn\'t have access to this repository, or perhaps it doesn\'t exist.');
+			} 
+			else {
+				error.push('This repository may require authentication, try logging in.');
+			}
+			response.render('view', { user: request.user, error: error }); 
 		});
 	}).catch(function (error) {
-		console.log('repo retrieve failed: ' + error);
-
-		error = [];
-		error.push('Unable to retrieve information about repository ' + request.params.organization + '/' + request.params.repository + '.'); 
-		if (request.user) {
-			error.push('You account doesn\'t have access to this repository, or perhaps it doesn\'t exist.');
-		} 
-		else {
-			error.push('This repository may require authentication, try logging in.');
-		}
-		response.render('view', { user: request.user, error: error }); 
+		response.status(500).end('Grats, you broke it.');
 	});
 });
 

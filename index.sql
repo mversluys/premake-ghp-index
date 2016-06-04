@@ -1,19 +1,27 @@
 -- database schema
 
--- day table allowing for slicing based on day
+-- day table allowing for slicing based intersting components of time 
 
 create table day (
 	id serial primary key,
 	date date unique not null,
-	day_of_week integer not null,
 	day integer not null,
-	month integer not null,
-	year integer not null);
+	week integer not null,
+	year integer not null,
+	day_of_week integer not null,
+	day_of_month integer not null,
+	day_of_year integer not null,
+	week_of_year integer not null,
+	month_of_year integer not null);
 
-create index day_day_of_week_idx on day(day_of_week);
 create index day_day_idx on day(day);
-create index day_month_idx on day(month);
+create index day_week_idx on day(week);
 create index day_year_idx on day(year);
+create index day_day_of_week_idx on day(day_of_week);
+create index day_day_of_month_idx on day(day_of_month);
+create index day_day_of_year_idx on day(day_of_year);
+create index day_week_of_year_idx on day(week_of_year);
+create index day_month_of_year_idx on day(month_of_year);
 
 -- packages
 
