@@ -7,7 +7,7 @@ append style
 	style.
 		h1.jumbo {
 			text-align: center;
-			margin-bottom: 40px;
+			margin-bottom: 30px;
 		}
 		h3 {
 			padding-bottom: 5px;
@@ -35,7 +35,10 @@ append style
 		div.package:hover {
 			background-color: rgb(245, 245, 245);
 		}
-
+		.footer {
+			margin-top: 30px;
+		}
+		
 block content
 
 	.modal.fade(id='add', tabindex='-1', role='dialog', aria-labelledby='#addLabel')
@@ -80,63 +83,61 @@ block content
 					|  : github packages for 
 					a(href='https://premake.github.io') premake
 
+		h3 actively used packages
 		.row
-			.col-md-9
-				h3 actively used packages
-				.row
-					each package in popular
-						- var url = 'http://github.com/' + package.organization + '/' + package.repository
-						.col-sm-4.package
-							h4.package
-								i.fa.fa-cube.fa-fw 
-								a(href='/#{package.organization}/#{package.repository}') #{package.organization}/#{package.repository}
-							div.description
-								=package.description
-							div.info
-								span 
-									i.fa.fa-eye
-									|  #{package.watchers} watchers 
-								span
-									i.fa.fa-star
-									|  #{package.stargazers} stargazers
-							div.info
-								i.fa.fa-line-chart
-								|  used 
-								strong #{package.usage}
-								|  times in the last month
-				h3 recently published packages
-				.row
-					each package in recent
-						- var url = 'http://github.com/' + package.organization + '/' + package.repository
-						.col-sm-4.package
-							h4.package
-								i.fa.fa-cube.fa-fw 
-								a(href='/#{package.organization}/#{package.repository}') #{package.organization}/#{package.repository}
-							div.description
-								=package.description
-							div.info
-								span 
-									i.fa.fa-eye
-									|  #{package.watchers} watchers 
-								span
-									i.fa.fa-star
-									|  #{package.stargazers} stargazers
-							div.info
-								i.fa.fa-tag
-								strong  #{package.latest_release} 
-								| published 
-								strong #{package.updated_fromnow}
+			each package in popular
+				- var url = 'http://github.com/' + package.organization + '/' + package.repository
+				.col-sm-4.package
+					h4.package
+						i.fa.fa-cube.fa-fw 
+						a(href='/#{package.organization}/#{package.repository}') #{package.organization}/#{package.repository}
+					div.description
+						=package.description
+					div.info
+						span 
+							i.fa.fa-eye
+							|  #{package.watchers} watchers 
+						span
+							i.fa.fa-star
+							|  #{package.stargazers} stargazers
+					div.info
+						i.fa.fa-line-chart
+						|  used 
+						strong #{package.usage}
+						|  times in the last month
+		h3 recently published packages
+		.row
+			each package in recent
+				- var url = 'http://github.com/' + package.organization + '/' + package.repository
+				.col-sm-4.package
+					h4.package
+						i.fa.fa-cube.fa-fw 
+						a(href='/#{package.organization}/#{package.repository}') #{package.organization}/#{package.repository}
+					div.description
+						=package.description
+					div.info
+						span 
+							i.fa.fa-eye
+							|  #{package.watchers} watchers 
+						span
+							i.fa.fa-star
+							|  #{package.stargazers} stargazers
+					div.info
+						i.fa.fa-tag
+						strong  #{package.latest_release} 
+						| published 
+						strong #{package.updated_fromnow}
 
-			.col-md-3
-
-				.well
+		.well.footer
+			.row
+				.col-sm-3
 					if user
 						button(type='button', data-toggle='modal', data-target='#add').btn.btn-default add a new package
 					else
 						| Would you like to contribute a new package? 
 						a(href='/login') Sign in to GitHub.
 
-				.well
+				.col-sm-3
 					span(style='font-size: 200%')
 						i.fa.fa-cube
 						|  #{count}
