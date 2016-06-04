@@ -150,6 +150,25 @@ function db_find_package(organization, repository) {
 	});
 }
 
+function db_update_package(organization, repository, description, stargazers, watchers, latest_release, updated) {
+	return new Promise(function (resolve, reject) {
+		db.none('update package set updated = ${updated}, latest_release = ${latest_release}, description = ${description}, stargazers = ${stargazers}, watchers = ${watchers} where organization = ${organization} and repository = ${repository}', {
+			organization: organization, 
+			repository: repository,
+			description: description,
+			stargazers: stargazers,
+			watchers: watchers,
+			latest_release: latest_release,
+			updated: updated
+		}).then(function (data) {
+			response.status(200).end();
+		}).catch(function (error) {
+			console.log('update of ' + request.body.repository.full_name + ' failed .. ' + error);
+			response.status(500).end('Uh oh. Internal server error.');
+		});
+	});
+}
+
 function db_findcreate_release(package, release) {
 	//console.log('get release %s %s', package, release);
 	return new Promise(function (resolve, reject) {
@@ -475,15 +494,16 @@ app.post('/api/add/:organization/:repository', function (request, response) {
 app.post('/api/update', function (request, response) {
 	//console.log('received update ' + JSON.stringify(request.body, null, 4));
 	if (request.body.release) {
-		db.none('update package set updated = ${updated}, latest_release = ${latest_release}, description = ${description}, stargazers = ${stargazers}, watchers = ${watchers} where organization = ${organization} and repository = ${repository}', {
-			organization: request.body.repository.owner.login, 
-			repository: request.body.repository.name,
-			description: request.body.repository.description,
-			stargazers: request.body.repository.stargazers_count,
-			watchers: request.body.repository.subscribers_count,
-			latest_release: request.body.release.tag_name,
-			updated: request.body.release.published_at
-		}).then(function (data) {
+
+		db_update_package(
+			request.body.repository.owner.login, 
+			request.body.repository.name,
+			request.body.repository.description,
+			request.body.repository.stargazers_count,
+			request.body.repository.subscribers_count,
+			request.body.release.tag_name,
+			request.body.release.published_at
+		).then(function (data) {
 			response.status(200).end();
 		}).catch(function (error) {
 			console.log('update of ' + request.body.repository.full_name + ' failed .. ' + error);
