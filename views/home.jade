@@ -83,7 +83,28 @@ block content
 		.row
 			.col-md-9
 				h3 actively used packages
-				h3 recently updated packages
+				.row
+					each package in popular
+						- var url = 'http://github.com/' + package.organization + '/' + package.repository
+						.col-sm-4.package
+							h4.package
+								i.fa.fa-cube.fa-fw 
+								a(href='/#{package.organization}/#{package.repository}') #{package.organization}/#{package.repository}
+							div.description
+								=package.description
+							div.info
+								span 
+									i.fa.fa-eye
+									|  #{package.watchers} watchers 
+								span
+									i.fa.fa-star
+									|  #{package.stargazers} stargazers
+							div.info
+								i.fa.fa-line-chart
+								|  used 
+								strong #{package.usage}
+								|  times in the last month
+				h3 recently published packages
 				.row
 					each package in recent
 						- var url = 'http://github.com/' + package.organization + '/' + package.repository
@@ -96,7 +117,7 @@ block content
 							div.info
 								span 
 									i.fa.fa-eye
-									|  #{package.watchers} watchers
+									|  #{package.watchers} watchers 
 								span
 									i.fa.fa-star
 									|  #{package.stargazers} stargazers

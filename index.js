@@ -296,14 +296,19 @@ app.get('/', function (request, response) {
 
 	Promise.all([
 		db.one('select count(*) from package'),
-		db.any('select organization, repository, description, latest_release, stargazers, watchers, updated from package order by updated desc limit 9')
+		db.any('select organization, repository, description, latest_release, stargazers, watchers, updated from package order by updated desc limit 9'),
+		db.any('select p.organization, p.repository, p.description, p.latest_release, p.stargazers, p.watchers, p.updated, r.usage from package as p inner join (select r.package, sum(u.downloaded + u.cached) as usage from usage u inner join release as r on u.release = r.id group by r.package order by sum(u.downloaded + u.cached) desc limit 9) as r on p.id = r.package order by r.usage desc')
 	]).then(function (results) {
 		var count = results[0];
 		var recent = results[1];
+		var popular = results[2];
 		for (var i = 0; i < recent.length; ++i) {
 			recent[i].updated_fromnow = moment(recent[i].updated).fromNow();
 		}
-		response.render('home', { user: request.user, count: count.count, recent: recent });
+		for (var i = 0; i < popular.length; ++i) {
+			popular[i].updated_fromnow = moment(popular[i].updated).fromNow();
+		}
+		response.render('home', { user: request.user, count: count.count, recent: recent, popular: popular });
 	}).catch(function (error) {
 		console.log('retrieving information from the database failed ' + error);
 		response.status(500).end('Uh oh. Internal server error.');
