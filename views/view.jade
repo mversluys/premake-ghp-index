@@ -18,6 +18,9 @@ append style
 			padding-left: 10px;
 			padding-right: 10px;
 		}
+		pre.ghp {
+			margin-bottom: 30px;
+		}
 
 block content
 
@@ -32,7 +35,14 @@ block content
 				.col-md-8
 					h2 #{repo.full_name}
 					h4 #{repo.description}
-					.soft-break
+					if release
+						pre.lang-lua.ghp ghp.import(
+							span.hljs-string '#{repo.full_name}'
+							| , 
+							span.hljs-string '#{release.tag_name}'
+							| )
+					else
+						.soft-break
 					if readme
 						!=readme.content_html
 					else
@@ -40,13 +50,6 @@ block content
 						.alert.alert-danger could not find a README in the repository
 
 				.col-md-4.side-panel
-					.hard-break
-					if release
-						pre.lang-lua ghp.import(
-							span.hljs-string '#{repo.full_name}'
-							| , 
-							span.hljs-string '#{release.tag_name}'
-							| )
 					.hard-break
 					p
 						i.fa.fa-github.fa-fw
