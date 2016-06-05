@@ -5,18 +5,15 @@ block vars
 
 append style
 	style.
-		div.soft-break {
-			margin-top: 5px;
-			margin-bottom: 5px;
-			border-bottom: 1px solid #ddd;
+		.info + .info {
+			border-top: 1px solid #ddd;
+			padding-top: 10px;
 		}
-		div.hard-break {
-			padding-top: 15px;
-			padding-bottom: 15px;
+		.info + .info-block {
+			border-top: none;
 		}
-		p.info {
-			padding-left: 10px;
-			padding-right: 10px;
+		.info-block {
+			margin-top: 40px;
 		}
 		pre.ghp {
 			margin-bottom: 30px;
@@ -41,27 +38,22 @@ block content
 							| , 
 							span.hljs-string '#{release.tag_name}'
 							| )
-					else
-						.soft-break
 					if readme
 						!=readme.content_html
 					else
-						.hard-break
 						.alert.alert-danger could not find a README in the repository
 
 				.col-md-4.side-panel
-					.hard-break
-					p
+					p.info.info-block
 						i.fa.fa-github.fa-fw
 						| &nbsp;
 						a(href=repo.html_url) #{repo.full_name}
-						.soft-break
 					if repo.parent
-						i.fa.fa-code-fork.fa-fw
-						|  forked from 
-						a(href=repo.parent.html_url) #{repo.parent.full_name}
-						.soft-break
-					p
+						p.info
+							i.fa.fa-code-fork.fa-fw
+							|  forked from 
+							a(href=repo.parent.html_url) #{repo.parent.full_name}
+					p.info
 						i.fa.fa-eye.fa-fw 
 						| &nbsp;
 						a(href=repo.html_url + '/watchers') #{repo.subscribers_count} watchers
@@ -69,36 +61,29 @@ block content
 						i.fa.fa-star.fa-fw
 						| &nbsp;
 						a(href=repo.html_url + '/stargazers') #{repo.stargazers_count} stargazers
-					.soft-break
-					p Language #{repo.language}
+					p.info Language #{repo.language}
 					if repo.has_issues
-						.soft-break
-						p
+						p.info
 							a(href=repo.html_url + '/issues') #{repo.open_issues} open issues
 					if repo.has_wiki
-						.soft-break
-						p
+						p.info
 							a(href=repo.html_url + '/wiki')
 								| wiki documentation 
-					.hard-break
+
 					if release
-						p
+						p.info.info-block
 							a(href=release.html_url) #{release.tag_name}
 							|  is the latest release
-						.soft-break
-						p published #{release.published_at_fromnow}
-						.soft-break
-						p by 
+						p.info published #{release.published_at_fromnow}
+						p.info by 
 							a(href=release.author.html_url) #{release.author.login}
-						.soft-break
-						p see all 
+						p.info see all 
 							a(href=repo.html_url + '/releases') releases
 					else
 						.alert.alert-danger there are no published 
 							a(href=repo.html_url + '/releases') releases
 
-					.hard-break
-					.well
+					.well.info-block
 						div usage in the last month
 						div#plot-usage-month
 							svg(style='height:150px')

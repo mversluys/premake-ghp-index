@@ -32,6 +32,8 @@ On your GitHub account, register an application.
 
   https://github.com/settings/developers
 
+You'll need the client id and secret from your application.  
+
 Setup environment variables
 
 ```bash
@@ -41,13 +43,21 @@ DATABASE_URL=postgres:///premake_ghp
 BASE_URL=http://localhost:5000
 ```
 
+If deploying a private instance with GitHub Enterprise, the index needs to know where to find the API and OAUTH end points of your server. The BASE_URL should match the host name of the index and will be used when installing webhooks into repositories.
+
+```bash
+GITHUB_API=https://your.github.name/api/v3
+GITHUB_OAUTH=https://your.github.name/login/oauth
+BASE_URL=http://your.index.name
+```
+
 It's recomended to place them into .env then import them before running node
 
 ```bash
 export $(cat .env | xargs)
 ```
 
-Running locally using node
+## Running locally
 
 ```bash
 node index.js
@@ -61,3 +71,4 @@ node index.js
   * Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET using the information from GitHub.
   * Set BASE_URL to the URL of the application.
   * Push this repository to it.
+
