@@ -41,6 +41,13 @@ append style
 		.footer {
 			margin-top: 30px;
 		}
+		.footer-icon {
+			float: left
+		}
+		.footer-content {
+			margin-left: 30px;
+		}
+
 		
 block content
 
@@ -82,7 +89,7 @@ block content
 		.row
 			.col-md-12
 				h1.jumbo 
-					a(href='https://github.com/mversluys/premake-ghp') premake-ghp
+					a(href='https://github.com/mversluys/premake-ghp/wiki') premake-ghp
 					|  : github packages for 
 					a(href='https://premake.github.io') premake
 
@@ -134,17 +141,38 @@ block content
 		.well.footer
 			.row
 				.col-sm-3
-					if user
-						button(type='button', data-toggle='modal', data-target='#add').btn.btn-default add a new package
-					else
-						| Would you like to contribute a new package? 
-						a(href='/login') Sign in to GitHub.
+					h4
+						.footer-icon
+							i.fa.fa-book.fa-lg.fa-fw
+						.footer-content Read the 
+							a(href='https://github.com/mversluys/premake-ghp/wiki') documentation
 
 				.col-sm-3
-					span(style='font-size: 200%')
-						i.fa.fa-cube
-						|  #{count}
-					span  total packages
+					h4
+						if user
+							div(style='float:left')
+								i.fa.fa-upload.fa-lg.fa-fw
+							div(style='margin-left: 25px') Contribute a 
+								a(href='#' data-toggle='modal' data-target='#add') new package
+						else
+							| Would you like to contribute a new package? 
+							a(href='/login') Sign in to GitHub.
+
+				.col-sm-3
+					h4
+						.footer-icon
+							i.fa.fa-cube.fa-lg.fa-fw
+						.footer-content 
+							span #{count} 
+							span.small packages
+
+				.col-sm-3
+					h4
+						.footer-icon
+							i.fa.fa-line-chart.fa-lg.fa-fw
+						.footer-content 
+							span #{count} 
+							span.small uses today
 
 block script
 	script.
